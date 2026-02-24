@@ -1,0 +1,4 @@
+This is a project for Analysis of Algorithms 2026 at Texas Tech University. 
+
+We will be using a clone of the open source Pacman repository as a fitness function for an Evolutionary Agent that finds highest success paramaters for Pacman decision making algorithms. 
+The project will show how AI can be used to find effective weights/parameters for a given algorithm and compare it to brute force search and some other methods.
