@@ -1,6 +1,2 @@
 # Default ignored files
-/workspace.xml
-.venv/
-__pycache__/
-*.pyc
-.env
+.idea/workspace.xml
