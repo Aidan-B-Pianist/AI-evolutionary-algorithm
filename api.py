@@ -25,10 +25,10 @@ async_client = AsyncOpenAI(
     base_url="https://generativelanguage.googleapis.com/v1beta/openai/"            
     )
 
-# app = FastAPI()
-NUM_OF_ITERATIONS = 3
+
+NUM_OF_ITERATIONS = 3 # However many iterations we want
 NUM_BEST = 10   # best 10 highest scored python codes
-MAX_NUM = 100   # out of how many iterations
+MAX_NUM = 100   # array index of results
 
 API_SEMAPHORE = asyncio.Semaphore(5) # 5 concurrent requests at a time
 
@@ -79,7 +79,7 @@ def convert_to_markdown(code: str) -> str:
 ````python
 {code.strip()}
 ```"""
-
+# Concurrent API sending using semaphores to not hit RPM (RPM = 15 for gemini-3.1-flash-lite-preview)
 async def send_to_api(prompt, task_id: int = 0) -> str:
     async with API_SEMAPHORE:
         for attempt in range(5):
@@ -89,7 +89,7 @@ async def send_to_api(prompt, task_id: int = 0) -> str:
                         model="gemini-3.1-flash-lite-preview",
                         messages=[{"role": "user", "content": prompt}]
                     ),
-                    timeout=120  # 2 minute timeout per call
+                    timeout=60 # 1 minute
                 )
                 print(f"[Task {task_id}] Success on attempt {attempt + 1}")
                 return response.choices[0].message.content
@@ -101,7 +101,7 @@ async def send_to_api(prompt, task_id: int = 0) -> str:
             except Exception as e:
                 error_msg = str(e)
                 if "429" in error_msg:
-                    wait = 15 * (2 ** attempt)
+                    wait = 15 * (2 ** attempt) # exponential backoff for error handling just in case
                     print(f"[Task {task_id}] Rate limited (attempt {attempt + 1}/5). "
                           f"Waiting {wait}s...")
                     await asyncio.sleep(wait)
@@ -114,17 +114,6 @@ async def send_to_api(prompt, task_id: int = 0) -> str:
 def concatenate_prompt_code(user_prompt, code) -> str:
     return user_prompt + '\n\n' + code
 
-
-# results = []
-# code = starter_code()
-# markdown = convert_to_markdown(code)
-# full_prompt = concatenate_prompt_code(user_prompt, markdown)
-
-# res = send_to_api(full_prompt)
-# print(res)
-# print("Appending res to list")
-# results.append(res)
-# print(results)
 
 async def main(code_list: list[str] | None = None) -> list[str]:
     arr = []
@@ -145,7 +134,7 @@ async def main(code_list: list[str] | None = None) -> list[str]:
         for idx, p in enumerate(prompts):
             task = asyncio.create_task(send_to_api(p, task_id=idx + 1))
             tasks.append(task)
-            await asyncio.sleep(2)  # Real stagger — task is already running
+            await asyncio.sleep(2)  # Stagger tasks so our RPM isn't too high
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
         arr.append(results)
