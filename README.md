@@ -76,6 +76,9 @@ results = asyncio.run(main(code_list=["def foo(): ...", "def bar(): ..."]))
 
 The Gemini free tier has a low RPM (requests per minute). The project handles this with:
 
+> **Gemini 3.1 Flash Lite**
+> - 15 requests/min (RPM)
+> - 500 requests/day (RPD)
 - **Semaphore** — caps concurrent requests
 - **Staggered launches** — 2s gap between each call
 - **Exponential backoff** — auto-retries on 429 errors with increasing delay
