@@ -6,13 +6,27 @@
 # py -3 -m venv .venv
 # .\.venv\Scripts\Activate.ps1
 # python -m pip install --upgrade pip
-# python -m pip install "fastapi[standard]" pydantic markdown_strings
+# pip install -r requirements.txt
 # -----------------------------------------------------------------------
 
 
 # from fastapi import FastAPI
-from pydantic import BaseModel
+# from pydantic.v1 import BaseModel
 from markdown_strings import *
+from openai import OpenAI
+import yaml
+
+with open("config.yaml", "r") as f:
+    config = yaml.safe_load(f)
+
+client = OpenAI(
+    api_key=config["api-key"],
+    base_url="https://generativelanguage.googleapis.com/v1beta/openai/"            
+    )
+
+# user prompts
+user_prompt = "You are an expert in designing and improving code through each iteration. Improve the python code given and only return the code with no explaination or comments"
+
 
 # app = FastAPI()
 NUM_OF_ITERATIONS = 1
@@ -61,6 +75,25 @@ def convert_to_markdown(code: str) -> str:
 {code.strip()}
 ```"""
 
+def send_to_api(prompt) -> str:
+    response = client.chat.completions.create(
+        model = "gemini-2.5-flash",
+        messages=[
+        {"role": "user", "content": prompt}
+        ]   
+    )
+    return response.choices[0].message.content
+
+def concatenate_prompt_code(user_prompt, code) -> str:
+    return user_prompt + '\n\n' + code
+
+
+results = []
 code = starter_code()
 markdown = convert_to_markdown(code)
-print(markdown)
+full_prompt = concatenate_prompt_code(user_prompt, markdown)
+
+res = send_to_api(full_prompt)
+print(res)
+print("Appending res to list")
+results.append(res)
