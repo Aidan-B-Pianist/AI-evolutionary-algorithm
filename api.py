@@ -1,6 +1,4 @@
 # In search.py modify the AStarAlgorithm Class
-# Doing this in python for integration purposes : Using FastAPI
-
 # Must use an environment to run this
 # ----------------------------------------------
 # py -3 -m venv .venv
