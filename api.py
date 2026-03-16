@@ -1,5 +1,6 @@
 # In search.py modify the AStarAlgorithm Class
 # Must use an environment to run this
+
 # ----------------------------------------------
 # py -3 -m venv .venv
 # .\.venv\Scripts\Activate.ps1
@@ -7,10 +8,6 @@
 # pip install -r requirements.txt
 # -----------------------------------------------------------------------
 
-
-# from fastapi import FastAPI
-# from pydantic.v1 import BaseModel
-# from markdown_strings import *
 from openai import AsyncOpenAI
 import yaml
 import asyncio
