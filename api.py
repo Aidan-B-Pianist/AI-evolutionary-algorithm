@@ -12,27 +12,32 @@
 
 # from fastapi import FastAPI
 # from pydantic.v1 import BaseModel
-from markdown_strings import *
-from openai import OpenAI
+# from markdown_strings import *
+from openai import AsyncOpenAI
 import yaml
+import asyncio
 
 with open("config.yaml", "r") as f:
     config = yaml.safe_load(f)
 
-client = OpenAI(
+async_client = AsyncOpenAI(
     api_key=config["api-key"],
     base_url="https://generativelanguage.googleapis.com/v1beta/openai/"            
     )
 
-# user prompts
-user_prompt = "You are an expert in designing and improving code through each iteration. Improve the python code given and only return the code with no explaination or comments"
-
-
 # app = FastAPI()
-NUM_OF_ITERATIONS = 1
+NUM_OF_ITERATIONS = 3
+NUM_BEST = 10   # best 10 highest scored python codes
+MAX_NUM = 100   # out of how many iterations
 
-# Sequential processing first (may take a while)
+API_SEMAPHORE = asyncio.Semaphore(5) # 5 concurrent requests at a time
 
+# user prompts
+beginning_user_prompt = "You are an expert in designing and improving code through each iteration. Improve the python code given and only return the code with no explaination or comments"
+improvement_user_prompt = "You are an expert in designing and improving python code in regards to pacman search agents. You are given the " + str(NUM_BEST) + " best python code that performed out of " + str(MAX_NUM) + ". Improve the python code even further"
+"only returning the code with no explaination or comments."
+
+#starter example
 starter_example = """
 def aStarSearch(problem, heuristic=nullHeuristic):
     queue = PriorityQueue()
@@ -75,25 +80,86 @@ def convert_to_markdown(code: str) -> str:
 {code.strip()}
 ```"""
 
-def send_to_api(prompt) -> str:
-    response = client.chat.completions.create(
-        model = "gemini-2.5-flash",
-        messages=[
-        {"role": "user", "content": prompt}
-        ]   
-    )
-    return response.choices[0].message.content
+async def send_to_api(prompt, task_id: int = 0) -> str:
+    async with API_SEMAPHORE:
+        for attempt in range(5):
+            try:
+                response = await asyncio.wait_for(
+                    async_client.chat.completions.create(
+                        model="gemini-3.1-flash-lite-preview",
+                        messages=[{"role": "user", "content": prompt}]
+                    ),
+                    timeout=120  # 2 minute timeout per call
+                )
+                print(f"[Task {task_id}] Success on attempt {attempt + 1}")
+                return response.choices[0].message.content
+
+            except asyncio.TimeoutError:
+                print(f"[Task {task_id}] Timed out on attempt {attempt + 1}")
+                continue
+
+            except Exception as e:
+                error_msg = str(e)
+                if "429" in error_msg:
+                    wait = 15 * (2 ** attempt)
+                    print(f"[Task {task_id}] Rate limited (attempt {attempt + 1}/5). "
+                          f"Waiting {wait}s...")
+                    await asyncio.sleep(wait)
+                else:
+                    print(f"[Task {task_id}] Non-retryable error: {error_msg}")
+                    raise
+
+        raise Exception(f"Task {task_id}: Max retries exceeded")
 
 def concatenate_prompt_code(user_prompt, code) -> str:
     return user_prompt + '\n\n' + code
 
 
-results = []
-code = starter_code()
-markdown = convert_to_markdown(code)
-full_prompt = concatenate_prompt_code(user_prompt, markdown)
+# results = []
+# code = starter_code()
+# markdown = convert_to_markdown(code)
+# full_prompt = concatenate_prompt_code(user_prompt, markdown)
 
-res = send_to_api(full_prompt)
-print(res)
-print("Appending res to list")
-results.append(res)
+# res = send_to_api(full_prompt)
+# print(res)
+# print("Appending res to list")
+# results.append(res)
+# print(results)
+
+async def main(code_list: list[str] | None = None) -> list[str]:
+    arr = []
+    print("Running API Scripts...\n")
+    if code_list is None:
+        code_list = [starter_code()] * 10
+    else:
+        code_list = code_list[:10]
+
+    for i in range(NUM_OF_ITERATIONS):
+        print(f"\n=== Iteration {i + 1}/{NUM_OF_ITERATIONS} ===")
+
+        prompts = [concatenate_prompt_code(beginning_user_prompt, convert_to_markdown(code))
+                for code in code_list]
+
+        # Use asyncio.create_task so they actually start with stagger
+        tasks = []
+        for idx, p in enumerate(prompts):
+            task = asyncio.create_task(send_to_api(p, task_id=idx + 1))
+            tasks.append(task)
+            await asyncio.sleep(2)  # Real stagger — task is already running
+
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        arr.append(results)
+        for j, result in enumerate(results):
+            if isinstance(result, Exception):
+                print(f"Result {j + 1} Failed: {result}")
+            else:
+                print(f"Result {j + 1} Passed")
+
+        if i < NUM_OF_ITERATIONS - 1:
+            print("Cooling down between iterations (60s)... [API RPM is only 15 \(0_0)/]")
+            await asyncio.sleep(60)
+
+    return arr
+
+if __name__ == "__main__":
+    asyncio.run(main())
