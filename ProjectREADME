@@ -6,3 +6,4 @@ The project will show how AI can be used to find effective weights/parameters fo
 Documents we created/altered:
   - README.md
   - api.py
+  - simulation.py
