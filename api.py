@@ -21,7 +21,7 @@ async_client = AsyncOpenAI(
     )
 
 
-NUM_OF_ITERATIONS = 3 # However many iterations we want
+NUM_OF_ITERATIONS = 1 # However many iterations we want
 NUM_BEST = 10   # best 10 highest scored python codes
 MAX_NUM = 100   # array index of results
 
@@ -114,9 +114,9 @@ async def main(code_list: list[str] | None = None) -> list[str]:
     arr = []
     print("Running API Scripts...\n")
     if code_list is None:
-        code_list = [starter_code()] * 10
+        code_list = [starter_code()] * NUM_BEST
     else:
-        code_list = code_list[:10]
+        code_list = code_list[:NUM_BEST]
 
     for i in range(NUM_OF_ITERATIONS):
         print(f"\n=== Iteration {i + 1}/{NUM_OF_ITERATIONS} ===")
@@ -143,7 +143,12 @@ async def main(code_list: list[str] | None = None) -> list[str]:
             print("Cooling down between iterations (60s)... [API RPM is only 15 \(0_0)/]")
             await asyncio.sleep(60)
 
+    for i in range(NUM_BEST):
+        with open("candidate"+str(i)+".py", "x") as f:
+            f.write(arr[i])
+    
     return arr
 
 if __name__ == "__main__":
     asyncio.run(main())
+    
