@@ -143,8 +143,9 @@ async def main(code_list: list[str] | None = None) -> list[str]:
             print("Cooling down between iterations (60s)... [API RPM is only 15 \(0_0)/]")
             await asyncio.sleep(60)
 
+    #Output to files for execution - Blame: Asa
     for i in range(NUM_BEST):
-        with open("candidate"+str(i)+".py", "x") as f:
+        with open("candidate"+str(i)+".py", "w") as f:
             f.write(arr[i])
     
     return arr
