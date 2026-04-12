@@ -7,10 +7,14 @@
 # python -m pip install --upgrade pip
 # pip install -r requirements.txt
 # -----------------------------------------------------------------------
+# To call this manually
+# python api.py inFileName.txt NUM_OF_ITERATIONS
+# ---------------------------------------------------
 
 from openai import AsyncOpenAI
 import yaml
 import asyncio
+import sys
 
 with open("config.yaml", "r") as f:
     config = yaml.safe_load(f)
@@ -20,48 +24,36 @@ async_client = AsyncOpenAI(
     base_url="https://generativelanguage.googleapis.com/v1beta/openai/"            
     )
 
+codeIn = ""
+with open(sys.argv[1], "r") as f:
+    codeIn = f.read()
+BASE_CODE = codeIn
 
-NUM_OF_ITERATIONS = 1 # However many iterations we want
-NUM_BEST = 10   # best 10 highest scored python codes
-MAX_NUM = 100   # array index of results
+NUM_OF_ITERATIONS = int(sys.argv[2]) # The number of candidates to generate.
+NUM_BEST = int(sys.argv[2])   
 
 API_SEMAPHORE = asyncio.Semaphore(5) # 5 concurrent requests at a time
 
 # user prompts
 beginning_user_prompt = "You are an expert in designing and improving code through each iteration. Improve the python code given and only return the code with no explaination or comments"
-improvement_user_prompt = "You are an expert in designing and improving python code in regards to pacman search agents. You are given the " + str(NUM_BEST) + " best python code that performed out of " + str(MAX_NUM) + ". Improve the python code even further"
+improvement_user_prompt = "You are an expert in designing and improving python code in regards to effiency. You are given the best python code that performed out of many. Improve the python code even further"+
 "only returning the code with no explaination or comments."
 
 #starter example
 starter_example = """
-def aStarSearch(problem, heuristic=nullHeuristic):
-    queue = PriorityQueue()
+Print the Fibonnaci Sequence
+n = 10
+a = 0
+b = 1
+next = b  
+count = 1
 
-    # get current state of Pacman
-    # State of current problem, parent, direction and cost of node -> parameters of Node constructor
-    current_node = Node(problem.getStartState(), 'none', 'none', 0)
-    queue.update(current_node, 0)
-
-    path = []
-    visited = []
-    while not queue.isEmpty():
-        current_node = queue.pop()
-        # returns path if Pacman has reached final destination state
-        if problem.isGoalState(current_node.state):
-            path = current_node.getPath()
-            return path
-
-        # Search the node that has the lowest combined cost and heuristic first.
-        if current_node.state not in visited:
-            visited.append(current_node.state)
-            for successor in problem.getSuccessors(current_node.state):
-                # successor[0] = state of new node
-                # succesor[1] = direction of new node
-                # successor[2] = cost of new node
-                total_cost = current_node.priority + successor[2]
-                next_node = Node(successor[0], current_node, successor[1], total_cost)
-                queue.update(next_node, total_cost + heuristic(successor[0], problem))
-    return path
+while count <= n:
+    print(next, end=" ")
+    count += 1
+    a, b = b, next
+    next = a + b
+print()
 """
 
 # Grab starter code
@@ -121,10 +113,10 @@ async def main(code_list: list[str] | None = None) -> list[str]:
     for i in range(NUM_OF_ITERATIONS):
         print(f"\n=== Iteration {i + 1}/{NUM_OF_ITERATIONS} ===")
 
-        prompts = [concatenate_prompt_code(beginning_user_prompt, convert_to_markdown(code))
+        prompts = [concatenate_prompt_code(beginning_user_prompt, code) #convert_to_markdown(code) was skipped using human in the loop
                 for code in code_list]
 
-        # Use asyncio.create_task so they actually start with stagger
+       # Use asyncio.create_task so they actually start with stagger
         tasks = []
         for idx, p in enumerate(prompts):
             task = asyncio.create_task(send_to_api(p, task_id=idx + 1))
@@ -132,16 +124,16 @@ async def main(code_list: list[str] | None = None) -> list[str]:
             await asyncio.sleep(2)  # Stagger tasks so our RPM isn't too high
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        arr.append(results)
+        arr.append(results[0])
         for j, result in enumerate(results):
             if isinstance(result, Exception):
                 print(f"Result {j + 1} Failed: {result}")
             else:
                 print(f"Result {j + 1} Passed")
 
-        if i < NUM_OF_ITERATIONS - 1:
-            print("Cooling down between iterations (60s)... [API RPM is only 15 \(0_0)/]")
-            await asyncio.sleep(60)
+        # if i < NUM_OF_ITERATIONS - 1:
+        #     print("Cooling down between iterations (60s)... [API RPM is only 15 \\(0_0)/]")
+        #     await asyncio.sleep(1)
 
     #Output to files for execution - Blame: Asa
     for i in range(NUM_BEST):
@@ -149,6 +141,7 @@ async def main(code_list: list[str] | None = None) -> list[str]:
             f.write(arr[i])
     
     return arr
+
 
 if __name__ == "__main__":
     asyncio.run(main())
