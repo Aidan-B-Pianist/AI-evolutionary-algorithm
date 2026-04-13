@@ -1,6 +1,3 @@
-# In search.py modify the AStarAlgorithm Class
-# Must use an environment to run this
-
 # ----------------------------------------------
 # py -3 -m venv .venv
 # .\.venv\Scripts\Activate.ps1
@@ -24,36 +21,21 @@ async_client = AsyncOpenAI(
     base_url="https://generativelanguage.googleapis.com/v1beta/openai/"            
     )
 
-# codeIn = ""
-# with open(sys.argv[1], "r") as f:
-#     codeIn = f.read()
-# BASE_CODE = codeIn
+# If called from the command line
+if len(sys.argv) > 1:
+    codeIn = ""
+    with open(sys.argv[1], "r") as f:
+        codeIn = f.read()
+    BASE_CODE = codeIn
 
-# NUM_OF_ITERATIONS = int(sys.argv[2]) # The number of candidates to generate.
-# NUM_BEST = int(sys.argv[2])
-
-# Base values
-NUM_OF_ITERATIONS = 3
-NUM_BEST = 10
-
-# User input
-def get_nums(num_iter, num_best):
-    try:
-        NUM_OF_ITERATIONS = num_iter
-        NUM_BEST = num_best
-        print(NUM_OF_ITERATIONS, NUM_BEST)
-    except ValueError:
-        print("Values should be integers")
-
+    NUM_OF_ITERATIONS = int(sys.argv[2]) # The number of candidates to generate.
+    NUM_BEST = int(sys.argv[2])   
 
 API_SEMAPHORE = asyncio.Semaphore(5) # 5 concurrent requests at a time
 
 # user prompts
 beginning_user_prompt = "You are an expert in designing and improving code through each iteration. Improve the python code given and only return the code with no explaination or comments"
-improvement_user_prompt = """
-You are an expert in designing and improving python code in regards to effiency. You are given the best python code that performed out of many. Improve the python code even further only returning the code with no explaination or comments.
-"""
-
+improvement_user_prompt = "You are an expert in designing and improving python code in regards to effiency. You are given the best python code that performed out of many. Improve the python code even further, only returning the code with no explaination or comments."
 
 #starter example
 starter_example = """
@@ -118,13 +100,13 @@ def concatenate_prompt_code(user_prompt, code) -> str:
     return user_prompt + '\n\n' + code
 
 
-async def main(code_list: list[str] | None = None) -> list[str]:
+async def main(code_list: list[str] | None = None, NUM_BEST: int | None = None, NUM_OF_ITERATIONS: int | None = None) -> list[str]:
     arr = []
     print("Running API Scripts...\n")
     if code_list is None:
         code_list = [starter_code()] * NUM_BEST
     else:
-        code_list = code_list[0]
+        code_list = code_list[:NUM_BEST]
 
     for i in range(NUM_OF_ITERATIONS):
         print(f"\n=== Iteration {i + 1}/{NUM_OF_ITERATIONS} ===")
@@ -152,13 +134,15 @@ async def main(code_list: list[str] | None = None) -> list[str]:
         #     await asyncio.sleep(1)
 
     #Output to files for execution - Blame: Asa
-    for i in range(NUM_BEST):
+    for i in range(NUM_OF_ITERATIONS):
         with open("candidate"+str(i)+".py", "w") as f:
             f.write(arr[i])
     
+    print("\n\n---------------------\nCandidates created in working directory.\n\n")
     return arr
 
 
 if __name__ == "__main__":
     asyncio.run(main())
     
+
