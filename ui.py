@@ -2,6 +2,8 @@
 import PySimpleGUI as sg
 import requests
 import os
+import asyncio
+from api import main
 
 # iterate and read starter code from api.py
 def get_starter_code():
@@ -25,7 +27,7 @@ def get_starter_code():
 
 # layout
 layout = [
-    [sg.Text('aStarSearch Code:', justification='center', font=('Any', 14), expand_x=True)],
+    [sg.Text('Ancestor code:', justification='center', font=('Any', 14), expand_x=True)],
     [sg.Multiline(default_text=get_starter_code(), size=(80, 20), key='-CODE-', expand_x=True, expand_y=True)],
     [
         sg.Text('NUM_OF_ITERATIONS:'), sg.Input(default_text='3', size=(5,1), key='-ITER-'),
@@ -56,5 +58,7 @@ while True:
 
         #send data here to the API
         window['-STATUS-'].update('NOTICE: Sent to API! Processing...')
+        asyncio.run(main(code_list=[code], NUM_BEST = num_best, NUM_OF_ITERATIONS = num_iter))
+        window['-STATUS-'].update('NOTICE: API Processing Complete. Candidates created in working directory')
 
 window.close()
