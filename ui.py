@@ -24,7 +24,6 @@ def get_starter_code():
         starter = ''
     return starter
 
-
 # layout
 layout = [
     [sg.Text('Ancestor code:', justification='center', font=('Any', 14), expand_x=True)],
@@ -41,6 +40,7 @@ layout = [
 # initialize window
 window = sg.Window('A* Search Evolution UI', layout, resizable=True, size=(800, 600))
 
+
 # instance loop
 while True:
     event, values = window.read()
@@ -52,6 +52,7 @@ while True:
             num_iter = int(values['-ITER-'])
             num_best = int(values['-BEST-'])
             max_num = int(values['-MAX-'])
+            get_nums(num_iter, num_best)
         except ValueError:
             window['-STATUS-'].update('ERROR: Enter valid integers for all variables!')
             continue
