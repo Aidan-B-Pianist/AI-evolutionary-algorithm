@@ -1,0 +1,22 @@
+This is a project for Analysis of Algorithms 2026 at Texas Tech University. 
+
+We will be creating an Evolutionary Agent that finds higher efficiency solutions for coding problems. 
+The project will show how AI can be used to find effective weights/parameters for a given algorithm.
+
+Quick Start
+1. Follow README.md to set up the LLM api portion of the project.
+
+2. There some additional python modules needed to use some scripts if you dont have them already
+    - PySimpleGUI
+    - cProfile
+
+3. Now you can run ui.py in a command prompt and generate candidate codes in the window, choosing a number of iterations for how many you want it to generate.
+    python .\ui.py
+
+4. The candiate codes can now be evaluated with fitness.py if they are python code. See the header of the file for instructions on use.
+
+5. Open candidate_display.html and choose a candidate result file to evaluate. The site will display its stats and then you can choose the best ones to iterate on.
+    - As a baseline, we score them by the total number of function calls times the total time taken, with 0 being the perfect score.
+
+6. Repeat until satisfied with final generation candidate.
+  
