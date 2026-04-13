@@ -108,7 +108,7 @@ async def main(code_list: list[str] | None = None) -> list[str]:
     if code_list is None:
         code_list = [starter_code()] * NUM_BEST
     else:
-        code_list = code_list[:NUM_BEST]
+        code_list = code_list[0]
 
     for i in range(NUM_OF_ITERATIONS):
         print(f"\n=== Iteration {i + 1}/{NUM_OF_ITERATIONS} ===")
